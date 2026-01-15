@@ -1,0 +1,8 @@
+.env
+.env.local
+__pycache__/
+*.pyc
+.streamlit/
+.pytest_cache/
+.coverage
+venv/
