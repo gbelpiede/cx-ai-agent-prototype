@@ -2,9 +2,13 @@ import requests
 import json
 from typing import Optional, Dict, Any, List
 import streamlit as st
+import os
 
-# API base URL
-API_BASE_URL = "http://localhost:8000/v1"
+# API base URL - use environment variable or default to production
+API_BASE_URL = os.getenv(
+    "API_BASE_URL",
+    "https://cxai-backend-prod-6e43ca701a40.herokuapp.com/v1"
+)
 
 class APIClient:
     """Client for calling FastAPI backend"""
