@@ -101,8 +101,8 @@ def show_dashboard():
         st.markdown("---")
         
         st.markdown("### 📍 Navigation")
-        page = st.radio("", 
-                        ["🏠 Dashboard", "🤖 Agents", "👥 Employees", "⚙️ Settings", "📊 Analytics"],
+        page = st.radio("",
+                        ["🏠 Onboarding", "🤖 Agent Configuration", "🤖 Agents", "👥 Employees", "⚙️ Settings", "📊 Analytics"],
                         label_visibility="collapsed")
         
         st.markdown("---")
@@ -112,8 +112,10 @@ def show_dashboard():
             st.rerun()
     
     # Main content
-    if page == "🏠 Dashboard":
+    if page == "🏠 Onboarding":
         show_dashboard_page()
+    elif page == "🤖 Agent Configuration":
+        show_agent_configuration_page()
     elif page == "🤖 Agents":
         show_agents_page()
     elif page == "👥 Employees":
@@ -189,6 +191,180 @@ def show_dashboard_page():
         with col3:
             st.markdown(activity["status"])
         st.divider()
+
+# ============ AGENT CONFIGURATION PAGE ============
+
+def show_agent_configuration_page():
+    st.markdown("# 🤖 Agent Configuration")
+    st.markdown("Define your AI agent's persona, instructions, and knowledge base.")
+
+    # Get existing agents
+    try:
+        agents = api_client.get_agents(st.session_state.token)
+    except Exception as e:
+        st.error(f"Failed to load agents: {str(e)}")
+        agents = []
+
+    st.markdown("---")
+
+    tab1, tab2 = st.tabs(["Create New", "Edit Existing"])
+
+    with tab1:
+        st.subheader("Create New Agent with Configuration")
+
+        col1, col2 = st.columns([1, 1])
+
+        with col1:
+            agent_name = st.text_input("Agent Name", value="", placeholder="e.g., HR Assistant", key="config_name")
+            description = st.text_area("Description", value="", placeholder="Brief description of this agent's purpose", height=100, key="config_desc")
+
+        with col2:
+            tone_score = st.slider("Tone", min_value=0.0, max_value=1.0, step=0.1,
+                                   value=0.7, help="0=Professional, 1=Friendly", key="config_tone")
+            voice_name = st.selectbox("Voice",
+                                     ["Adam", "Sarah", "Dorothy", "Josh", "Maya", "Chris", "James"],
+                                     key="config_voice")
+
+        st.markdown("---")
+
+        st.subheader("System Instructions")
+        st.markdown("*Detailed instructions for how this AI should behave and respond to employees.*")
+        instructions = st.text_area(
+            "Instructions",
+            value="",
+            placeholder="You are a friendly HR assistant. Your role is to...",
+            height=150,
+            key="config_instructions"
+        )
+
+        st.markdown("---")
+
+        st.subheader("Knowledge Base")
+        st.markdown("*Select PDFs that the AI should reference when responding.*")
+
+        try:
+            documents = api_client.get_documents(st.session_state.token)
+
+            if documents:
+                doc_options = {doc['id']: doc['filename'] for doc in documents}
+                selected_doc_ids = st.multiselect(
+                    "Select Knowledge Base Documents",
+                    options=list(doc_options.keys()),
+                    format_func=lambda x: doc_options[x],
+                    key="config_kb"
+                )
+            else:
+                st.info("📋 No documents available. Upload PDFs in the Onboarding section first.")
+                selected_doc_ids = []
+        except Exception as e:
+            st.error(f"Failed to load documents: {str(e)}")
+            selected_doc_ids = []
+
+        st.markdown("---")
+
+        if st.button("✅ Create Agent Configuration", key="create_config"):
+            if agent_name:
+                try:
+                    with st.spinner("Creating agent configuration..."):
+                        agent_data = {
+                            "name": agent_name,
+                            "description": description,
+                            "tone_score": tone_score,
+                            "voice_name": voice_name,
+                            "language": "en",
+                            "instructions": instructions,
+                            "knowledge_base_ids": selected_doc_ids,
+                            "flows_enabled": {
+                                "retention_checkin": True,
+                                "payroll_help": False,
+                                "safety_report": False
+                            }
+                        }
+                        result = api_client.create_agent(st.session_state.token, agent_data)
+
+                    st.success(f"✅ Agent '{agent_name}' created with configuration!")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Failed to create agent: {str(e)}")
+            else:
+                st.error("Please enter an agent name")
+
+    with tab2:
+        st.subheader("Edit Existing Agent")
+
+        if not agents:
+            st.info("No agents yet. Create one in the 'Create New' tab first.")
+        else:
+            selected_agent = st.selectbox(
+                "Select Agent",
+                options=agents,
+                format_func=lambda x: x['name'],
+                key="edit_agent_select"
+            )
+
+            if selected_agent:
+                col1, col2 = st.columns([1, 1])
+
+                with col1:
+                    edited_name = st.text_input("Agent Name", value=selected_agent.get('name', ''), key="edit_name")
+                    edited_desc = st.text_area("Description", value=selected_agent.get('description', ''), height=100, key="edit_desc")
+
+                with col2:
+                    edited_tone = st.slider("Tone", min_value=0.0, max_value=1.0, step=0.1,
+                                           value=selected_agent.get('tone_score', 0.7), key="edit_tone")
+                    edited_voice = st.selectbox("Voice",
+                                              ["Adam", "Sarah", "Dorothy", "Josh", "Maya", "Chris", "James"],
+                                              index=["Adam", "Sarah", "Dorothy", "Josh", "Maya", "Chris", "James"].index(selected_agent.get('voice_name', 'Adam')),
+                                              key="edit_voice")
+
+                st.markdown("---")
+
+                st.subheader("System Instructions")
+                edited_instructions = st.text_area(
+                    "Instructions",
+                    value=selected_agent.get('instructions', ''),
+                    height=150,
+                    key="edit_instructions"
+                )
+
+                st.markdown("---")
+
+                st.subheader("Knowledge Base")
+                try:
+                    documents = api_client.get_documents(st.session_state.token)
+                    doc_options = {doc['id']: doc['filename'] for doc in documents}
+                    current_kb = selected_agent.get('knowledge_base_ids', [])
+
+                    edited_doc_ids = st.multiselect(
+                        "Select Knowledge Base Documents",
+                        options=list(doc_options.keys()),
+                        default=current_kb,
+                        format_func=lambda x: doc_options[x],
+                        key="edit_kb"
+                    )
+                except Exception as e:
+                    st.error(f"Failed to load documents: {str(e)}")
+                    edited_doc_ids = current_kb
+
+                st.markdown("---")
+
+                if st.button("💾 Save Changes", key="save_config"):
+                    try:
+                        with st.spinner("Updating agent configuration..."):
+                            updates = {
+                                "name": edited_name,
+                                "description": edited_desc,
+                                "tone_score": edited_tone,
+                                "voice_name": edited_voice,
+                                "instructions": edited_instructions,
+                                "knowledge_base_ids": edited_doc_ids
+                            }
+                            api_client.update_agent(st.session_state.token, selected_agent['id'], updates)
+
+                        st.success("✅ Agent configuration updated!")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Failed to update agent: {str(e)}")
 
 # ============ AGENTS PAGE ============
 

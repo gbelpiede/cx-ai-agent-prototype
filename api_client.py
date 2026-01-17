@@ -251,5 +251,21 @@ class APIClient:
         except Exception as e:
             raise Exception(f"Get ROI error: {str(e)}")
 
+    # ============ DOCUMENTS ============
+
+    def get_documents(self, token: str) -> List[Dict[str, Any]]:
+        """Get available documents (PDFs)"""
+        try:
+            response = requests.get(
+                f"{self.base_url}/documents",
+                headers=self.get_headers(token)
+            )
+            if response.status_code == 200:
+                return response.json().get("documents", [])
+            else:
+                raise Exception(response.json().get("detail", "Failed to get documents"))
+        except Exception as e:
+            raise Exception(f"Get documents error: {str(e)}")
+
 # Create global API client instance
 api_client = APIClient()
