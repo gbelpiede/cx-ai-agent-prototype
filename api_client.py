@@ -12,20 +12,34 @@ API_BASE_URL = os.getenv(
 
 class APIClient:
     """Client for calling FastAPI backend"""
-    
+
     def __init__(self, base_url: str = API_BASE_URL):
         self.base_url = base_url
-    
+
     def get_headers(self, token: Optional[str] = None) -> Dict[str, str]:
         """Get headers with auth token"""
         headers = {"Content-Type": "application/json"}
         if token:
             headers["Authorization"] = f"Bearer {token}"
         return headers
+
+    def _get_error_message(self, response_data: Dict[str, Any], default: str) -> str:
+        """Extract error message from response"""
+        # Try "error" field first (from FastAPI exception handler)
+        if "error" in response_data:
+            return response_data["error"]
+        # Try "detail" field (from Pydantic validation errors or HTTPException detail)
+        if "detail" in response_data:
+            detail = response_data["detail"]
+            # If detail is a list (validation errors), join them
+            if isinstance(detail, list):
+                return "; ".join([str(e.get("msg", str(e))) for e in detail])
+            return str(detail)
+        return default
     
     # ============ AUTH ============
     
-    def signup(self, email: str, password: str, company_name: str, 
+    def signup(self, email: str, password: str, company_name: str,
                timezone: str, industry: str, employee_count: int) -> Dict[str, Any]:
         """Sign up new customer"""
         try:
@@ -44,7 +58,8 @@ class APIClient:
             if response.status_code == 200:
                 return response.json()
             else:
-                raise Exception(response.json().get("detail", "Signup failed"))
+                raise Exception(self._get_error_message(response.json(), "Signup failed")
+                raise Exception(error_msg)
         except Exception as e:
             raise Exception(f"Signup error: {str(e)}")
     
@@ -59,7 +74,8 @@ class APIClient:
             if response.status_code == 200:
                 return response.json()
             else:
-                raise Exception(response.json().get("detail", "Login failed"))
+                raise Exception(self._get_error_message(response.json(), "Login failed")
+                raise Exception(error_msg)
         except Exception as e:
             raise Exception(f"Login error: {str(e)}")
     
@@ -76,7 +92,7 @@ class APIClient:
             if response.status_code == 200:
                 return response.json()
             else:
-                raise Exception(response.json().get("detail", "Agent creation failed"))
+                raise Exception(self._get_error_message(response.json(), "Agent creation failed"))
         except Exception as e:
             raise Exception(f"Create agent error: {str(e)}")
     
@@ -90,7 +106,7 @@ class APIClient:
             if response.status_code == 200:
                 return response.json().get("agents", [])
             else:
-                raise Exception(response.json().get("detail", "Failed to get agents"))
+                raise Exception(self._get_error_message(response.json(), "Failed to get agents"))
         except Exception as e:
             raise Exception(f"Get agents error: {str(e)}")
     
@@ -105,7 +121,7 @@ class APIClient:
             if response.status_code == 200:
                 return response.json()
             else:
-                raise Exception(response.json().get("detail", "Agent update failed"))
+                raise Exception(self._get_error_message(response.json(), "Agent update failed"))
         except Exception as e:
             raise Exception(f"Update agent error: {str(e)}")
     
@@ -119,7 +135,7 @@ class APIClient:
             if response.status_code == 200:
                 return response.json()
             else:
-                raise Exception(response.json().get("detail", "Agent activation failed"))
+                raise Exception(self._get_error_message(response.json(), "Agent activation failed"))
         except Exception as e:
             raise Exception(f"Activate agent error: {str(e)}")
     
@@ -136,7 +152,7 @@ class APIClient:
             if response.status_code == 200:
                 return response.json()
             else:
-                raise Exception(response.json().get("detail", "Employee creation failed"))
+                raise Exception(self._get_error_message(response.json(), "Employee creation failed"))
         except Exception as e:
             raise Exception(f"Add employee error: {str(e)}")
     
@@ -150,7 +166,7 @@ class APIClient:
             if response.status_code == 200:
                 return response.json()
             else:
-                raise Exception(response.json().get("detail", "Failed to get employees"))
+                raise Exception(self._get_error_message(response.json(), "Failed to get employees"))
         except Exception as e:
             raise Exception(f"Get employees error: {str(e)}")
     
@@ -171,7 +187,7 @@ class APIClient:
             if response.status_code == 200:
                 return response.json()
             else:
-                raise Exception(response.json().get("detail", "Check-in creation failed"))
+                raise Exception(self._get_error_message(response.json(), "Check-in creation failed"))
         except Exception as e:
             raise Exception(f"Create check-in error: {str(e)}")
     
@@ -185,7 +201,7 @@ class APIClient:
             if response.status_code == 200:
                 return response.json()
             else:
-                raise Exception(response.json().get("detail", "Failed to get check-in"))
+                raise Exception(self._get_error_message(response.json(), "Failed to get check-in"))
         except Exception as e:
             raise Exception(f"Get check-in error: {str(e)}")
     
@@ -203,7 +219,7 @@ class APIClient:
             if response.status_code == 200:
                 return response.json()
             else:
-                raise Exception(response.json().get("detail", "Message send failed"))
+                raise Exception(self._get_error_message(response.json(), "Message send failed"))
         except Exception as e:
             raise Exception(f"Send message error: {str(e)}")
     
@@ -263,7 +279,7 @@ class APIClient:
             if response.status_code == 200:
                 return response.json().get("documents", [])
             else:
-                raise Exception(response.json().get("detail", "Failed to get documents"))
+                raise Exception(self._get_error_message(response.json(), "Failed to get documents"))
         except Exception as e:
             raise Exception(f"Get documents error: {str(e)}")
 
