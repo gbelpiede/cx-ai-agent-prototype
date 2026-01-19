@@ -58,8 +58,7 @@ class APIClient:
             if response.status_code == 200:
                 return response.json()
             else:
-                raise Exception(self._get_error_message(response.json(), "Signup failed")
-                raise Exception(error_msg)
+                raise Exception(self._get_error_message(response.json(), "Signup failed"))
         except Exception as e:
             raise Exception(f"Signup error: {str(e)}")
     
@@ -74,8 +73,7 @@ class APIClient:
             if response.status_code == 200:
                 return response.json()
             else:
-                raise Exception(self._get_error_message(response.json(), "Login failed")
-                raise Exception(error_msg)
+                raise Exception(self._get_error_message(response.json(), "Login failed"))
         except Exception as e:
             raise Exception(f"Login error: {str(e)}")
     
